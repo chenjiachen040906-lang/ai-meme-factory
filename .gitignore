@@ -1,0 +1,9 @@
+# AI 原创模板的原始高清生成图（中间产物，约7MB）
+# 实际部署使用的是压缩后的 dist/assets/templates/*.webp
+vibe_images/
+
+# 系统/编辑器杂项
+.DS_Store
+Thumbs.db
+*.log
+node_modules/

@@ -1,403 +1,321 @@
-// ===== AI 表情包工厂 - 主应用逻辑 =====
+// ===== AI 表情包工厂 v2 - 主应用 =====
+// 流程：输入 → 即时出4张成品表情包 → 点选进编辑器 → 拖拽文字微调 → 下载
 
 (function() {
     'use strict';
 
-    // DOM 元素
-    const memeInput = document.getElementById('memeInput');
-    const generateBtn = document.getElementById('generateBtn');
-    const randomBtn = document.getElementById('randomBtn');
-    const templateGrid = document.getElementById('templateGrid');
-    const galleryGrid = document.getElementById('galleryGrid');
-    const memeCanvas = document.getElementById('memeCanvas');
-    const topTextInput = document.getElementById('topText');
-    const bottomTextInput = document.getElementById('bottomText');
-    const fontSizeSlider = document.getElementById('fontSize');
-    const fontSizeValue = document.getElementById('fontSizeValue');
-    const textStrokeToggle = document.getElementById('textStroke');
-    const downloadBtn = document.getElementById('downloadBtn');
-    const shareBtn = document.getElementById('shareBtn');
-    const toastContainer = document.getElementById('toastContainer');
+    const CANVAS_SIZE = 640;
+    const imageCache = {};
+
+    // DOM
+    const $ = id => document.getElementById(id);
+    const memeInput = $('memeInput');
+    const generateBtn = $('generateBtn');
+    const randomBtn = $('randomBtn');
+    const resultsGrid = $('resultsGrid');
+    const resultsSection = $('resultsSection');
+    const editorSection = $('editorSection');
+    const memeCanvas = $('memeCanvas');
+    const topTextInput = $('topText');
+    const bottomTextInput = $('bottomText');
+    const downloadBtn = $('downloadBtn');
+    const shareBtn = $('shareBtn');
+    const remixBtn = $('remixBtn');
+    const toastContainer = $('toastContainer');
 
     // 状态
     let currentTemplate = null;
-    let currentTextColor = '#FFFFFF';
-    let currentFilter = 'ai';
-    let aiMatchedTemplates = [];
+    let currentCaptions = { top: '', bottom: '' };
+    let textPositions = { top: 0.12, bottom: 0.9 }; // 相对高度
+    let dragging = null;
+    let lastInput = '';
 
-    // ===== 工具函数 =====
-    function showToast(message, type = 'success') {
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        toast.textContent = message;
-        toastContainer.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+    // ===== 工具 =====
+    function showToast(msg, type = 'success') {
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.textContent = msg;
+        toastContainer.appendChild(t);
+        setTimeout(() => t.remove(), 2600);
     }
 
-    function showLoading(text = 'AI 正在匹配模板...') {
-        const overlay = document.createElement('div');
-        overlay.className = 'loading-overlay active';
-        overlay.id = 'loadingOverlay';
-        overlay.innerHTML = `
-            <div class="loading-spinner"></div>
-            <div class="loading-text">${text}</div>
-        `;
-        document.body.appendChild(overlay);
-    }
-
-    function hideLoading() {
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) overlay.remove();
-    }
-
-    // ===== AI 智能匹配算法 =====
-    function analyzeInput(text) {
-        if (!text.trim()) return [];
-
-        const lowerText = text.toLowerCase();
-        const scores = MEME_TEMPLATES.map(template => {
-            let score = 0;
-
-            // 关键词匹配
-            template.keywords.forEach(keyword => {
-                if (lowerText.includes(keyword.toLowerCase())) {
-                    score += 10;
-                }
-            });
-
-            // 类别匹配
-            const categoryKeywords = SCENE_EMOTION_MAP[template.category] || [];
-            categoryKeywords.forEach(kw => {
-                if (lowerText.includes(kw)) {
-                    score += 5;
-                }
-            });
-
-            return { template, score };
+    function loadImage(src) {
+        if (imageCache[src]) return Promise.resolve(imageCache[src]);
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => { imageCache[src] = img; resolve(img); };
+            img.onerror = reject;
+            img.src = src;
         });
-
-        // 按分数排序，取前8个
-        return scores
-            .filter(s => s.score > 0)
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 8)
-            .map(s => s.template);
     }
 
-    // ===== 渲染模板 =====
-    function renderTemplates(templates, isAI = false) {
-        templateGrid.innerHTML = '';
+    // ===== 渲染一张成品表情包到 canvas =====
+    async function renderMeme(canvas, template, captions, positions, opts = {}) {
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const img = await loadImage(template.src);
 
-        if (templates.length === 0) {
-            templateGrid.innerHTML = '<p style="color:var(--text-muted);grid-column:1/-1;text-align:center;padding:40px;">没有找到匹配的模板，试试其他描述吧～</p>';
-            return;
-        }
+        ctx.clearRect(0, 0, W, H);
 
-        templates.forEach((template, index) => {
-            const item = document.createElement('div');
-            item.className = 'template-item';
-            item.dataset.id = template.id;
+        // 背景
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, W, H);
 
-            let matchBadge = '';
-            if (isAI && index < 3) {
-                const matchPercent = Math.max(95 - index * 8, 75);
-                matchBadge = `<span class="template-match">${matchPercent}% 匹配</span>`;
+        // 绘制模板图：cover 适配 + 轻微放大裁掉边缘水印
+        const scale = Math.max(W / img.width, H / img.height) * 1.06;
+        const dw = img.width * scale, dh = img.height * scale;
+        ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+        // 文字
+        const fontSize = opts.fontSize || Math.round(W * 0.085);
+        if (captions.top) drawMemeText(ctx, captions.top, W / 2, H * (positions?.top ?? 0.12), fontSize, W, opts);
+        if (captions.bottom) drawMemeText(ctx, captions.bottom, W / 2, H * (positions?.bottom ?? 0.9), fontSize, W, opts);
+    }
+
+    // 标准 meme 排版：粗体 + 黑描边 + 白字，自动换行
+    function drawMemeText(ctx, text, cx, cy, fontSize, canvasW, opts = {}) {
+        const color = opts.color || '#FFFFFF';
+        const stroke = opts.stroke !== false;
+        const font = `900 ${fontSize}px "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif`;
+        ctx.font = font;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineJoin = 'round';
+        ctx.miterLimit = 2;
+
+        // 自动换行
+        const maxWidth = canvasW * 0.88;
+        const lines = wrapText(ctx, text, maxWidth);
+        const lineHeight = fontSize * 1.15;
+        const startY = cy - ((lines.length - 1) / 2) * lineHeight;
+
+        lines.forEach((line, i) => {
+            const y = startY + i * lineHeight;
+            if (stroke) {
+                ctx.strokeStyle = 'rgba(0,0,0,0.92)';
+                ctx.lineWidth = fontSize * 0.18;
+                ctx.strokeText(line, cx, y);
             }
-
-            item.innerHTML = `
-                ${matchBadge}
-                <span class="template-emoji">${template.emoji}</span>
-                <span class="template-name">${template.name}</span>
-            `;
-
-            item.addEventListener('click', () => selectTemplate(template, item));
-            templateGrid.appendChild(item);
+            ctx.fillStyle = color;
+            ctx.fillText(line, cx, y);
         });
     }
 
-    function renderGallery() {
-        galleryGrid.innerHTML = '';
-        MEME_TEMPLATES.forEach(template => {
-            const item = document.createElement('div');
-            item.className = 'gallery-item';
-            item.innerHTML = `
-                <span class="gallery-emoji">${template.emoji}</span>
-                <span class="gallery-name">${template.name}</span>
-                <span class="gallery-category">${getCategoryName(template.category)}</span>
-            `;
-            item.addEventListener('click', () => {
-                document.getElementById('create').scrollIntoView({ behavior: 'smooth' });
-                setTimeout(() => selectTemplate(template), 500);
-            });
-            galleryGrid.appendChild(item);
-        });
-    }
-
-    function getCategoryName(cat) {
-        const names = { happy: '开心', sad: '难过', angry: '生气', funny: '搞笑' };
-        return names[cat] || cat;
-    }
-
-    // ===== 选择模板 =====
-    function selectTemplate(template, element) {
-        currentTemplate = template;
-
-        // 更新选中状态
-        document.querySelectorAll('.template-item').forEach(el => el.classList.remove('selected'));
-        if (element) element.classList.add('selected');
-
-        // 自动填充文字
-        const inputText = memeInput.value.trim();
-        if (inputText && !topTextInput.value) {
-            // 智能提取简短文字
-            const shortText = extractShortText(inputText);
-            topTextInput.value = shortText;
+    function wrapText(ctx, text, maxWidth) {
+        if (ctx.measureText(text).width <= maxWidth) return [text];
+        const lines = [];
+        let cur = '';
+        for (const ch of text) {
+            if (ctx.measureText(cur + ch).width > maxWidth && cur) {
+                lines.push(cur);
+                cur = ch;
+            } else {
+                cur += ch;
+            }
         }
-
-        // 渲染 Canvas
-        renderCanvas();
-
-        // 滚动到编辑器
-        document.getElementById('step3').scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-        showToast(`已选择「${template.name}」模板`);
+        if (cur) lines.push(cur);
+        return lines;
     }
 
-    function extractShortText(text) {
-        // 提取简短的描述文字（最多10个字符）
-        if (text.length <= 10) return text;
-        // 尝试找到逗号或句号前的部分
-        const match = text.match(/^(.{1,10})[，。,!！]/);
-        if (match) return match[1];
-        return text.substring(0, 10) + '...';
-    }
-
-    // ===== Canvas 渲染 =====
-    function renderCanvas() {
-        if (!currentTemplate) return;
-
-        const ctx = memeCanvas.getContext('2d');
-        const width = memeCanvas.width;
-        const height = memeCanvas.height;
-        const fontSize = parseInt(fontSizeSlider.value);
-        const useStroke = textStrokeToggle.checked;
-
-        // 清空画布
-        ctx.clearRect(0, 0, width, height);
-
-        // 绘制背景渐变（根据类别）
-        const gradients = {
-            happy: ['#6C5CE7', '#00CEC9'],
-            sad: ['#636E72', '#2D3436'],
-            angry: ['#D63031', '#E17055'],
-            funny: ['#FDCB6E', '#E17055']
-        };
-        const colors = gradients[currentTemplate.category] || gradients.happy;
-        const gradient = ctx.createLinearGradient(0, 0, width, height);
-        gradient.addColorStop(0, colors[0]);
-        gradient.addColorStop(1, colors[1]);
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, width, height);
-
-        // 绘制大 emoji
-        ctx.font = `${fontSize * 4}px serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(currentTemplate.emoji, width / 2, height / 2);
-
-        // 绘制模板名称
-        ctx.font = `bold ${fontSize * 0.7}px 'Noto Sans SC', sans-serif`;
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.fillText(currentTemplate.name, width / 2, height / 2 + fontSize * 3);
-
-        // 绘制上方文字
-        const topText = topTextInput.value || '';
-        if (topText) {
-            drawTextWithStyle(ctx, topText, width / 2, 60, fontSize, useStroke);
-        }
-
-        // 绘制下方文字
-        const bottomText = bottomTextInput.value || '';
-        if (bottomText) {
-            drawTextWithStyle(ctx, bottomText, width / 2, height - 40, fontSize, useStroke);
-        }
-    }
-
-    function drawTextWithStyle(ctx, text, x, y, fontSize, useStroke) {
-        ctx.font = `900 ${fontSize}px 'Noto Sans SC', sans-serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        if (useStroke) {
-            ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-            ctx.lineWidth = fontSize / 6;
-            ctx.lineJoin = 'round';
-            ctx.strokeText(text, x, y);
-        }
-
-        ctx.fillStyle = currentTextColor;
-        ctx.fillText(text, x, y);
-    }
-
-    // ===== 事件绑定 =====
-
-    // 生成按钮
-    generateBtn.addEventListener('click', () => {
+    // ===== 生成结果 =====
+    async function generate() {
         const text = memeInput.value.trim();
         if (!text) {
-            showToast('请先输入描述文字', 'error');
+            showToast('先输入一句场景或吐槽', 'error');
             memeInput.focus();
             return;
         }
+        lastInput = text;
 
-        showLoading();
+        generateBtn.disabled = true;
+        generateBtn.querySelector('span').textContent = 'AI 生成中…';
 
-        // 模拟 AI 处理延迟
-        setTimeout(() => {
-            aiMatchedTemplates = analyzeInput(text);
-            renderTemplates(aiMatchedTemplates, true);
-            hideLoading();
+        const matches = MemeEngine.matchTemplates(text, 4);
+        const emotions = MemeEngine.analyzeEmotion(text);
+        const primaryEmotion = emotions[0]?.[0] || 'deadpan';
 
-            // 切换到 AI 推荐标签
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector('[data-filter="ai"]').classList.add('active');
-            currentFilter = 'ai';
+        // 用户输入若可拆成两句，直接用；否则引擎生成
+        const split = MemeEngine.splitInput(text);
 
-            showToast(`AI 为你匹配了 ${aiMatchedTemplates.length} 个模板`);
-        }, 800);
-    });
+        resultsGrid.innerHTML = '';
+        resultsSection.classList.add('visible');
 
-    // 随机灵感
-    randomBtn.addEventListener('click', () => {
-        const random = RANDOM_INSPIRATIONS[Math.floor(Math.random() * RANDOM_INSPIRATIONS.length)];
-        memeInput.value = random;
-        showToast('已生成随机灵感 ✨');
-    });
+        for (let i = 0; i < matches.length; i++) {
+            const { template, match } = matches[i];
+            const captions = split
+                ? { top: split.top, bottom: split.bottom }
+                : MemeEngine.generateCaptions(text, i === 0 ? primaryEmotion : template.emotion);
 
-    // 快速标签
-    document.querySelectorAll('.tag').forEach(tag => {
-        tag.addEventListener('click', () => {
-            memeInput.value = tag.dataset.text;
-            memeInput.focus();
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.style.animationDelay = `${i * 0.08}s`;
+            card.innerHTML = `
+                <div class="result-canvas-wrap"><canvas width="480" height="480"></canvas></div>
+                <div class="result-meta">
+                    <span class="result-name">${template.name}</span>
+                    <span class="result-match">${match}% 匹配</span>
+                </div>
+            `;
+            resultsGrid.appendChild(card);
+
+            const canvas = card.querySelector('canvas');
+            await renderMeme(canvas, template, captions, null, { fontSize: 40 });
+
+            card.addEventListener('click', () => openEditor(template, captions));
+        }
+
+        generateBtn.disabled = false;
+        generateBtn.querySelector('span').textContent = '生成表情包';
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ===== 编辑器 =====
+    async function openEditor(template, captions) {
+        currentTemplate = template;
+        currentCaptions = { ...captions };
+        textPositions = { top: 0.12, bottom: 0.9 };
+        topTextInput.value = captions.top;
+        bottomTextInput.value = captions.bottom;
+
+        editorSection.classList.add('visible');
+        await redrawEditor();
+        editorSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast(`已载入「${template.name}」，拖动文字可调整位置`);
+    }
+
+    async function redrawEditor() {
+        if (!currentTemplate) return;
+        await renderMeme(memeCanvas, currentTemplate, {
+            top: topTextInput.value,
+            bottom: bottomTextInput.value
+        }, textPositions, {
+            color: window.__memeColor || '#FFFFFF',
+            stroke: $('textStroke').checked,
+            fontSize: parseInt($('fontSize').value)
         });
+    }
+
+    // 拖拽文字
+    function canvasPos(e) {
+        const rect = memeCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) / rect.width,
+            y: (clientY - rect.top) / rect.height
+        };
+    }
+
+    function hitText(pos) {
+        const topY = textPositions.top, botY = textPositions.bottom;
+        const dTop = Math.abs(pos.y - topY), dBot = Math.abs(pos.y - botY);
+        if (dTop < 0.08 && dTop <= dBot && topTextInput.value) return 'top';
+        if (dBot < 0.08 && bottomTextInput.value) return 'bottom';
+        return null;
+    }
+
+    memeCanvas.addEventListener('pointerdown', e => {
+        const pos = canvasPos(e);
+        dragging = hitText(pos);
+        if (dragging) memeCanvas.setPointerCapture(e.pointerId);
     });
-
-    // 筛选按钮
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
-
-            if (currentFilter === 'ai') {
-                renderTemplates(aiMatchedTemplates, true);
-            } else if (currentFilter === 'all') {
-                renderTemplates(MEME_TEMPLATES);
-            } else {
-                const filtered = MEME_TEMPLATES.filter(t => t.category === currentFilter);
-                renderTemplates(filtered);
-            }
-        });
+    memeCanvas.addEventListener('pointermove', e => {
+        if (!dragging) {
+            memeCanvas.style.cursor = hitText(canvasPos(e)) ? 'grab' : 'default';
+            return;
+        }
+        memeCanvas.style.cursor = 'grabbing';
+        const pos = canvasPos(e);
+        textPositions[dragging] = Math.min(Math.max(pos.y, 0.06), 0.95);
+        redrawEditor();
     });
+    memeCanvas.addEventListener('pointerup', () => { dragging = null; });
 
-    // 编辑器控件
-    topTextInput.addEventListener('input', renderCanvas);
-    bottomTextInput.addEventListener('input', renderCanvas);
-
-    fontSizeSlider.addEventListener('input', () => {
-        fontSizeValue.textContent = fontSizeSlider.value + 'px';
-        renderCanvas();
+    // 控件
+    topTextInput.addEventListener('input', redrawEditor);
+    bottomTextInput.addEventListener('input', redrawEditor);
+    $('fontSize').addEventListener('input', () => {
+        $('fontSizeValue').textContent = $('fontSize').value + 'px';
+        redrawEditor();
     });
-
-    textStrokeToggle.addEventListener('change', renderCanvas);
-
+    $('textStroke').addEventListener('change', redrawEditor);
     document.querySelectorAll('.color-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            currentTextColor = btn.dataset.color;
-            renderCanvas();
+            window.__memeColor = btn.dataset.color;
+            redrawEditor();
         });
     });
 
-    // 下载按钮
-    downloadBtn.addEventListener('click', () => {
-        if (!currentTemplate) {
-            showToast('请先选择一个模板', 'error');
-            return;
-        }
+    // 换一张（循环模板）
+    remixBtn.addEventListener('click', async () => {
+        if (!currentTemplate) return;
+        const idx = MEME_TEMPLATES.findIndex(t => t.id === currentTemplate.id);
+        currentTemplate = MEME_TEMPLATES[(idx + 1) % MEME_TEMPLATES.length];
+        await redrawEditor();
+        showToast(`已切换为「${currentTemplate.name}」`);
+    });
 
+    // 下载
+    downloadBtn.addEventListener('click', () => {
+        if (!currentTemplate) return;
         const link = document.createElement('a');
-        link.download = `meme_${currentTemplate.name}_${Date.now()}.png`;
+        link.download = `meme_${currentTemplate.id}_${Date.now()}.png`;
         link.href = memeCanvas.toDataURL('image/png');
         link.click();
-
-        showToast('表情包已下载！🎉');
+        showToast('已保存！去群里炸场吧 🎉');
     });
 
-    // 分享按钮
+    // 分享
     shareBtn.addEventListener('click', () => {
-        if (!currentTemplate) {
-            showToast('请先选择一个模板', 'error');
-            return;
-        }
-
-        // 尝试使用 Web Share API
-        if (navigator.share) {
-            memeCanvas.toBlob(blob => {
-                const file = new File([blob], 'meme.png', { type: 'image/png' });
+        if (!currentTemplate) return;
+        memeCanvas.toBlob(blob => {
+            if (navigator.share && navigator.canShare?.({ files: [new File([blob], 'm.png', { type: 'image/png' })] })) {
                 navigator.share({
                     title: 'AI 表情包工厂',
-                    text: `我生成的「${currentTemplate.name}」表情包`,
-                    files: [file]
+                    text: '我用 AI 表情包工厂做的图',
+                    files: [new File([blob], 'meme.png', { type: 'image/png' })]
                 }).catch(() => {});
-            });
-        } else {
-            // 复制到剪贴板
-            memeCanvas.toBlob(blob => {
-                navigator.clipboard.write([
-                    new ClipboardItem({ 'image/png': blob })
-                ]).then(() => {
-                    showToast('已复制到剪贴板！');
-                }).catch(() => {
-                    showToast('请截图分享', 'error');
-                });
-            });
-        }
+            } else if (navigator.clipboard?.write) {
+                navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+                    .then(() => showToast('已复制到剪贴板'))
+                    .catch(() => showToast('浏览器不支持，请直接下载', 'error'));
+            } else {
+                showToast('浏览器不支持，请直接下载', 'error');
+            }
+        });
     });
 
-    // ===== 初始化 =====
-    function init() {
-        renderGallery();
-
-        // 初始渲染一些推荐模板
-        const initialTemplates = MEME_TEMPLATES.slice(0, 8);
-        renderTemplates(initialTemplates);
-
-        // Canvas 初始状态
-        const ctx = memeCanvas.getContext('2d');
-        ctx.fillStyle = '#1A1A2E';
-        ctx.fillRect(0, 0, memeCanvas.width, memeCanvas.height);
-        ctx.font = '24px "Noto Sans SC"';
-        ctx.fillStyle = '#8888AA';
-        ctx.textAlign = 'center';
-        ctx.fillText('选择模板后预览将显示在这里', memeCanvas.width / 2, memeCanvas.height / 2);
-
-        // 平滑滚动
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function(e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) target.scrollIntoView({ behavior: 'smooth' });
-            });
+    // 随机灵感 & 示例标签
+    randomBtn.addEventListener('click', () => {
+        memeInput.value = RANDOM_INSPIRATIONS[Math.floor(Math.random() * RANDOM_INSPIRATIONS.length)];
+        memeInput.focus();
+    });
+    document.querySelectorAll('.tag').forEach(tag => {
+        tag.addEventListener('click', () => {
+            memeInput.value = tag.dataset.text;
+            generate();
         });
-    }
+    });
 
-    // 页面加载完成后初始化
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
+    generateBtn.addEventListener('click', generate);
+    memeInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); generate(); }
+    });
 
+    // 平滑滚动
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+
+    // 首屏演示：自动渲染一张示例
+    (async function demo() {
+        const demoCanvas = $('demoCanvas');
+        if (!demoCanvas) return;
+        await renderMeme(demoCanvas, MEME_TEMPLATES[0], { top: '当代码一次跑通', bottom: '就这？简简单单' }, null, { fontSize: 42 });
+    })();
 })();
