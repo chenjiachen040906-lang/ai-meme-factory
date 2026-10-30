@@ -8,7 +8,8 @@
     const STRONG_SIGNALS = {
         '哭': 'cry', '崩溃': 'cry', '破防': 'cry', '笑死': 'laugh', '哈哈': 'laugh',
         '躺平': 'lieflat', '摆烂': 'lieflat', '无语': 'deadpan', '震惊': 'shock',
-        '气死': 'angry', '生气': 'angry', '委屈': 'sad', '得意': 'smug', '牛逼': 'smug'
+        '气死': 'angry', '生气': 'angry', '委屈': 'sad', '得意': 'smug', '牛逼': 'smug',
+        '好耶': 'happy', '开心': 'happy', '干饭': 'happy', '佛系': 'deadpan', '水豚': 'deadpan'
     };
 
     // 否定词：翻转情绪
@@ -52,7 +53,7 @@
 
     // 无明确情绪信号时的通用排序：中性/吐槽脸优先，正面的"得意"垫底
     const DEFAULT_PRIORITY = {
-        deadpan: 8, lieflat: 7, cry: 6, shock: 5, sad: 4, angry: 3, laugh: 2, smug: 1
+        deadpan: 9, lieflat: 8, cry: 7, shock: 6, sad: 5, angry: 4, happy: 3, laugh: 2, smug: 1
     };
 
     // ===== 模板匹配 =====
