@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 表情包工厂 - 一句话生成你的专属表情包</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 背景动画 -->
+    <div class="bg-animation">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <span class="logo">🎭</span>
+            <span>AI 表情包工厂</span>
+        </div>
+        <div class="nav-links">
+            <a href="#create">创作</a>
+            <a href="#gallery">模板库</a>
+            <a href="#about">关于</a>
+        </div>
+    </nav>
+
+    <!-- Hero 区域 -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">✨ AI 驱动 · 3秒出图</div>
+            <h1 class="hero-title">
+                <span class="title-line">用一句话</span>
+                <span class="title-line gradient-text">生成专属表情包</span>
+            </h1>
+            <p class="hero-subtitle">输入你的场景、心情或吐槽，AI 智能匹配模板，一键生成可下载的表情包</p>
+            <a href="#create" class="hero-cta">
+                <span>开始创作</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 17L17 7M17 7H7M17 7V17"/>
+                </svg>
+            </a>
+        </div>
+        <div class="hero-visual">
+            <div class="meme-preview-float">
+                <div class="float-meme meme-1">
+                    <div class="meme-text-top">当代码一次跑通</div>
+                    <div class="meme-img-placeholder">😎</div>
+                    <div class="meme-text-bottom">这不科学</div>
+                </div>
+                <div class="float-meme meme-2">
+                    <div class="meme-text-top">周一早上</div>
+                    <div class="meme-img-placeholder">😵</div>
+                    <div class="meme-text-bottom">我是谁我在哪</div>
+                </div>
+                <div class="float-meme meme-3">
+                    <div class="meme-text-top">DDL前一天</div>
+                    <div class="meme-img-placeholder">🔥</div>
+                    <div class="meme-text-bottom">奇迹时刻</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 创作区域 -->
+    <section id="create" class="create-section">
+        <div class="section-header">
+            <h2>创作你的表情包</h2>
+            <p>三步搞定：描述 → 选模板 → 下载</p>
+        </div>
+
+        <div class="create-container">
+            <!-- 步骤 1: 输入 -->
+            <div class="step-card step-input" id="step1">
+                <div class="step-number">01</div>
+                <h3>描述你的场景</h3>
+                <p class="step-desc">输入心情、场景或想吐槽的事</p>
+                <div class="input-wrapper">
+                    <textarea id="memeInput" placeholder="例如：考试前一夜还在刷手机的我" rows="3"></textarea>
+                    <div class="input-actions">
+                        <button class="btn-random" id="randomBtn" title="随机灵感">
+                            🎲 随机灵感
+                        </button>
+                        <button class="btn-generate" id="generateBtn">
+                            <span>AI 匹配模板</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M5 12h14M12 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="quick-tags">
+                    <span class="tag-label">热门场景：</span>
+                    <button class="tag" data-text="加班到深夜">加班</button>
+                    <button class="tag" data-text="考试全过了">考试</button>
+                    <button class="tag" data-text="干饭时间到">干饭</button>
+                    <button class="tag" data-text="又双叒被催婚">催婚</button>
+                    <button class="tag" data-text="工资又花光了">月光</button>
+                    <button class="tag" data-text="周末躺平计划">躺平</button>
+                </div>
+            </div>
+
+            <!-- 步骤 2: 选模板 -->
+            <div class="step-card step-templates" id="step2">
+                <div class="step-number">02</div>
+                <h3>选择模板</h3>
+                <p class="step-desc">AI 已为你智能匹配，也可自由浏览</p>
+                <div class="template-filters">
+                    <button class="filter-btn active" data-filter="ai">🤖 AI 推荐</button>
+                    <button class="filter-btn" data-filter="all">📋 全部</button>
+                    <button class="filter-btn" data-filter="happy">😄 开心</button>
+                    <button class="filter-btn" data-filter="sad">😢 难过</button>
+                    <button class="filter-btn" data-filter="angry">😡 生气</button>
+                    <button class="filter-btn" data-filter="funny">🤣 搞笑</button>
+                </div>
+                <div class="template-grid" id="templateGrid">
+                    <!-- 动态加载 -->
+                </div>
+            </div>
+
+            <!-- 步骤 3: 编辑 -->
+            <div class="step-card step-editor" id="step3">
+                <div class="step-number">03</div>
+                <h3>自定义编辑</h3>
+                <p class="step-desc">调整文字、字体和样式</p>
+                <div class="editor-layout">
+                    <div class="editor-canvas">
+                        <canvas id="memeCanvas" width="500" height="500"></canvas>
+                    </div>
+                    <div class="editor-controls">
+                        <div class="control-group">
+                            <label>上方文字</label>
+                            <input type="text" id="topText" placeholder="输入上方文字">
+                        </div>
+                        <div class="control-group">
+                            <label>下方文字</label>
+                            <input type="text" id="bottomText" placeholder="输入下方文字">
+                        </div>
+                        <div class="control-group">
+                            <label>字体大小</label>
+                            <input type="range" id="fontSize" min="20" max="60" value="36">
+                            <span class="range-value" id="fontSizeValue">36px</span>
+                        </div>
+                        <div class="control-group">
+                            <label>文字颜色</label>
+                            <div class="color-options">
+                                <button class="color-btn active" data-color="#FFFFFF" style="background:#FFFFFF"></button>
+                                <button class="color-btn" data-color="#000000" style="background:#000000"></button>
+                                <button class="color-btn" data-color="#FFD700" style="background:#FFD700"></button>
+                                <button class="color-btn" data-color="#FF4500" style="background:#FF4500"></button>
+                                <button class="color-btn" data-color="#00FF7F" style="background:#00FF7F"></button>
+                                <button class="color-btn" data-color="#FF69B4" style="background:#FF69B4"></button>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label>文字描边</label>
+                            <div class="toggle-wrapper">
+                                <label class="toggle">
+                                    <input type="checkbox" id="textStroke" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span>描边</span>
+                            </div>
+                        </div>
+                        <div class="editor-actions">
+                            <button class="btn-download" id="downloadBtn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                <span>下载表情包</span>
+                            </button>
+                            <button class="btn-share" id="shareBtn">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                </svg>
+                                <span>分享</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 模板库 -->
+    <section id="gallery" class="gallery-section">
+        <div class="section-header">
+            <h2>热门模板库</h2>
+            <p>精选 100+ 经典表情包模板</p>
+        </div>
+        <div class="gallery-grid" id="galleryGrid">
+            <!-- 动态加载 -->
+        </div>
+    </section>
+
+    <!-- 关于 -->
+    <section id="about" class="about-section">
+        <div class="about-content">
+            <h2>关于 AI 表情包工厂</h2>
+            <p>这是一个用 AI 技术驱动的表情包创作工具。输入你的想法，智能算法会为你匹配最合适的模板，让你轻松创作出有趣、有个性的表情包。</p>
+            <div class="about-features">
+                <div class="feature">
+                    <div class="feature-icon">🤖</div>
+                    <h4>AI 智能匹配</h4>
+                    <p>自然语言理解，精准匹配模板</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🎨</div>
+                    <h4>自由编辑</h4>
+                    <p>文字、颜色、字体随心调整</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <h4>一键下载</h4>
+                    <p>高清 PNG 格式，即下即用</p>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <h4>全平台适配</h4>
+                    <p>手机电脑都能用，随时随地创作</p>
+                </div>
+            </div>
+            <div class="about-tech">
+                <p>Powered by Qoder · 2026 Qoder 高校创造力大赛参赛作品</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>© 2026 AI 表情包工厂 · 2026 Qoder 高校创造力大赛 · LifeHack 赛道</p>
+    </footer>
+
+    <!-- Toast 提示 -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="js/templates.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
