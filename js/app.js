@@ -316,6 +316,6 @@
     (async function demo() {
         const demoCanvas = $('demoCanvas');
         if (!demoCanvas) return;
-        await renderMeme(demoCanvas, MEME_TEMPLATES[0], { top: '当代码一次跑通', bottom: '就这？简简单单' }, null, { fontSize: 42 });
+        await renderMeme(demoCanvas, MEME_TEMPLATES[0], { top: '当代码一次跑通', bottom: '哈哈哈哈 绷不住了' }, null, { fontSize: 42 });
     })();
 })();
