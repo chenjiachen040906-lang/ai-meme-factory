@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 表情包工厂 - 一句话生成能直接发群里的表情包</title>
     <meta name="description" content="输入一句场景或吐槽，AI 秒出4张成品表情包。奶蛙、卡皮巴拉、自嘲熊、线条小狗等9位顶流角色，智能文案、拖拽编辑、一键下载。2026 Qoder 高校创造力大赛作品。">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=6">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 </head>
@@ -36,13 +36,13 @@
     <!-- Hero -->
     <section class="hero">
         <div class="hero-content">
-            <div class="hero-badge">🔥 奶蛙 / 牛牛 / 香蕉猫 / 卡皮巴拉 全员到岗</div>
+            <div class="hero-badge">🆕 新玩法：对话斗图条漫 · 奶蛙 / 牛牛 / 香蕉猫 / 卡皮巴拉 全员到岗</div>
             <h1 class="hero-title">
                 <span class="title-line">说一句话，</span>
                 <span class="title-line">出四张<em class="marker">能直接发群</em>的</span>
                 <span class="title-line fun-font">表情包</span>
             </h1>
-            <p class="hero-subtitle">不是套模板填空——AI 读懂你的场景和情绪，从 9 位顶流角色里挑最贴的脸，配好梗文案，3 秒出成品。拖一拖文字，下载，炸群。</p>
+            <p class="hero-subtitle">不是套模板填空——AI 读懂你的场景和情绪，从 9 位顶流角色里挑最贴的脸，配好梗文案，3 秒出成品。还能一键生成四格对话斗图条漫，让奶蛙和卡皮巴拉当场互怼。</p>
             <a href="#create" class="hero-cta">
                 <span>马上做一张</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
@@ -50,7 +50,7 @@
             <div class="hero-stats">
                 <div class="stat"><strong>11</strong><span>梗图模板</span></div>
                 <div class="stat-divider"></div>
-                <div class="stat"><strong>4</strong><span>张 / 次 秒出</span></div>
+                <div class="stat"><strong>2</strong><span>种创作玩法</span></div>
                 <div class="stat-divider"></div>
                 <div class="stat"><strong>0</strong><span>版权风险</span></div>
             </div>
@@ -108,6 +108,10 @@
             <p>场景、吐槽、心情，什么都行</p>
         </div>
         <div class="input-card">
+            <div class="mode-tabs">
+                <button class="mode-tab active" id="modeSingle" data-mode="single">🖼️ 单张表情包</button>
+                <button class="mode-tab" id="modeComic" data-mode="comic">💬 对话斗图条漫 <span class="mode-new">NEW</span></button>
+            </div>
             <textarea id="memeInput" rows="2" placeholder="例如：像水豚一样情绪稳定地上班"></textarea>
             <div class="input-actions">
                 <button class="btn-random" id="randomBtn">🎲 没灵感？点我</button>
@@ -135,6 +139,21 @@
                 <span class="results-hint">点一张进编辑器微调 ↓</span>
             </div>
             <div class="results-grid" id="resultsGrid"></div>
+        </div>
+
+        <!-- 斗图条漫结果 -->
+        <div class="comic-section" id="comicSection">
+            <div class="results-header">
+                <h3 class="fun-font">四格互怼，一出好戏</h3>
+                <span class="results-hint">台词不对味？换一版 ↓</span>
+            </div>
+            <div class="comic-frame">
+                <canvas id="comicCanvas" width="960" height="960"></canvas>
+            </div>
+            <div class="comic-actions">
+                <button class="btn-remix" id="comicRetryBtn">🔄 换一版台词</button>
+                <button class="btn-download" id="comicDownloadBtn">⬇ 下载条漫 PNG</button>
+            </div>
         </div>
     </section>
 
@@ -272,6 +291,7 @@
                 <div class="feature"><div class="feature-icon">🧠</div><h4>情绪语义匹配</h4><p>中文情绪词典 + 强信号词 + 位置权重，不是简单关键词</p></div>
                 <div class="feature"><div class="feature-icon">✍️</div><h4>幽默文案引擎</h4><p>9 类情绪语料库，自动配上下句梗</p></div>
                 <div class="feature"><div class="feature-icon">🎨</div><h4>AI 原创梗图</h4><p>奶蛙、牛牛、香蕉猫、卡皮巴拉等全网流行梗脸，AI 原创演绎零版权风险</p></div>
+                <div class="feature"><div class="feature-icon">💬</div><h4>对话斗图条漫</h4><p>一句吐槽自动生成四格互怼漫画，双角色+气泡台词+神转折收尾</p></div>
                 <div class="feature"><div class="feature-icon">🖱️</div><h4>拖拽式编辑</h4><p>文字位置直接拖，所见即所得</p></div>
             </div>
             <div class="about-tech"><p>Powered by Qoder · 2026 Qoder 高校创造力大赛 · LifeHack 赛道</p></div>
@@ -284,8 +304,9 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script src="js/templates.js"></script>
-    <script src="js/engine.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/templates.js?v=6"></script>
+    <script src="js/engine.js?v=6"></script>
+    <script src="js/comic.js?v=6"></script>
+    <script src="js/app.js?v=6"></script>
 </body>
 </html>

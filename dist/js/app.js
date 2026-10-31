@@ -29,6 +29,8 @@
     let textPositions = { top: 0.12, bottom: 0.9 }; // 相对高度
     let dragging = null;
     let lastInput = '';
+    let mode = 'single';
+    let comicVariant = 0;
 
     // ===== 工具 =====
     function showToast(msg, type = 'success') {
@@ -126,7 +128,9 @@
             return;
         }
         lastInput = text;
+        if (mode === 'comic') return generateComic();
 
+        $('comicSection').classList.remove('visible');
         generateBtn.disabled = true;
         generateBtn.querySelector('span').textContent = 'AI 生成中…';
 
@@ -168,6 +172,50 @@
         generateBtn.querySelector('span').textContent = '生成表情包';
         resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+
+    // ===== 斗图条漫 =====
+    async function generateComic() {
+        resultsSection.classList.remove('visible');
+        editorSection.classList.remove('visible');
+        generateBtn.disabled = true;
+        generateBtn.querySelector('span').textContent = '编剧中…';
+
+        const script = ComicEngine.generateScript(lastInput, comicVariant);
+        const section = $('comicSection');
+        const canvas = $('comicCanvas');
+        section.classList.add('visible');
+        await ComicEngine.renderComic(canvas, script);
+
+        generateBtn.disabled = false;
+        generateBtn.querySelector('span').textContent = '生成表情包';
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    document.querySelectorAll('.mode-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            mode = tab.dataset.mode;
+            comicVariant = 0;
+            memeInput.placeholder = mode === 'comic'
+                ? '例如：甲方说随便改改就行 → 看奶蛙和卡皮巴拉互怼'
+                : '例如：像水豚一样情绪稳定地上班';
+        });
+    });
+
+    $('comicRetryBtn').addEventListener('click', async () => {
+        comicVariant++;
+        await generateComic();
+        showToast('换了一版台词，看看这出戏怎么样');
+    });
+
+    $('comicDownloadBtn').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = `comic_${Date.now()}.png`;
+        link.href = $('comicCanvas').toDataURL('image/png');
+        link.click();
+        showToast('条漫已保存！去群里开战吧 🎉');
+    });
 
     // ===== 编辑器 =====
     async function openEditor(template, captions) {

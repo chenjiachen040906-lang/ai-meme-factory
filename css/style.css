@@ -1173,3 +1173,90 @@ section {
     .navbar { padding: 10px 4vw; }
     .nav-cta { font-size: 0.82rem; padding: 8px 14px; }
 }
+
+/* ===== 玩法切换 Tab ===== */
+.mode-tabs {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.mode-tab {
+    flex: 1;
+    padding: 12px 16px;
+    background: var(--bg-soft);
+    border: var(--border);
+    border-radius: 14px;
+    color: var(--ink);
+    font-size: 0.98rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.mode-tab.active {
+    background: var(--frog);
+    box-shadow: var(--shadow-hard-sm);
+}
+
+.mode-tab:not(.active):hover {
+    transform: translateY(-2px);
+    background: var(--white);
+}
+
+.mode-new {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    background: #FF4500;
+    color: #fff;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 900;
+    vertical-align: middle;
+}
+
+/* ===== 斗图条漫结果区 ===== */
+.comic-section {
+    opacity: 0;
+    transform: translateY(28px);
+    max-height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.comic-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: none;
+    overflow: visible;
+    pointer-events: auto;
+    padding-top: 64px;
+}
+
+.comic-frame {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 14px;
+    background: var(--white);
+    border: var(--border);
+    border-radius: var(--radius);
+    box-shadow: 8px 8px 0 var(--cap-soft), 8px 8px 0 3px var(--ink);
+    transform: rotate(-0.6deg);
+}
+
+.comic-frame canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+
+.comic-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 26px;
+}
